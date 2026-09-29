@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lewis Rentals</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #f3f6f9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-box {
+      width: 92%;
+      max-width: 400px;
+      background: white;
+      padding: 30px;
+      border-radius: 18px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 5px;
+      color: #111827;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #6b7280;
+      margin-bottom: 25px;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      margin-bottom: 6px;
+      font-weight: bold;
+      color: #374151;
+    }
+
+    input {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      font-size: 16px;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 22px;
+      border: none;
+      border-radius: 10px;
+      background: #111827;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    #message {
+      margin-top: 15px;
+      text-align: center;
+      font-weight: bold;
+      min-height: 22px;
+    }
+
+    .dashboard {
+      display: none;
+      width: 94%;
+      max-width: 900px;
+      margin: 30px auto;
+      background: white;
+      padding: 30px;
+      border-radius: 18px;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 15px;
+      margin-top: 25px;
+    }
+
+    .card {
+      padding: 20px;
+      border-radius: 14px;
+      background: #f3f4f6;
+    }
+
+    .card h3 {
+      margin: 0 0 8px;
+    }
+
+    .logout {
+      max-width: 180px;
+      background: #dc2626;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- LOGIN -->
+  <div class="login-box" id="loginBox">
+    <h1>Lewis Rentals</h1>
+    <div class="subtitle">Admin Management System</div>
+
+    <label>Email</label>
+    <input
+      type="email"
+      id="email"
+      placeholder="Enter admin email"
+      autocomplete="email"
+    >
+
+    <label>Password</label>
+    <input
+      type="password"
+      id="password"
+      placeholder="Enter password"
+      autocomplete="current-password"
+    >
+
+    <button id="loginButton">Sign In</button>
+
+    <div id="message"></div>
+  </div>
+
+
+  <!-- DASHBOARD -->
+  <div class="dashboard" id="dashboard">
+
+    <h1>Lewis Rentals</h1>
+    <p>Admin Dashboard</p>
+
+    <div class="cards">
+
+      <div class="card">
+        <h3>Property</h3>
+        <p>Lewis Rentals</p>
+      </div>
+
+      <div class="card">
+        <h3>Location</h3>
+        <p>Kamulu, Nairobi</p>
+      </div>
+
+      <div class="card">
+        <h3>Rooms</h3>
+        <p>20 Rooms</p>
+      </div>
+
+      <div class="card">
+        <h3>Monthly Rent</h3>
+        <p>KSh 90,000</p>
+      </div>
+
+    </div>
+
+    <button class="logout" id="logoutButton">Logout</button>
+
+  </div>
+
+
+<script>
+
+  // YOUR EXISTING SUPABASE PROJECT
+  const SUPABASE_URL = "https://trnbtljkzehkrgkinzop.supabase.co";
+
+  const SUPABASE_KEY =
+    "sb_publishable_vuC8A3VpCwrK8KLmCQ3Qvw_dmfl_3jU";
+
+  const db = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
+
+
+  const loginBox = document.getElementById("loginBox");
+  const dashboard = document.getElementById("dashboard");
+  const loginButton = document.getElementById("loginButton");
+  const logoutButton = document.getElementById("logoutButton");
+  const message = document.getElementById("message");
+
+
+  // LOGIN
+  loginButton.addEventListener("click", async function () {
+
+    message.textContent = "Connecting...";
+
+    const email =
+      document.getElementById("email").value.trim();
+
+    const password =
+      document.getElementById("password").value;
+
+
+    if (!email || !password) {
+      message.textContent =
+        "Please enter your email and password.";
+      return;
+    }
+
+
+    try {
+
+      const result =
+        await db.auth.signInWithPassword({
+          email: email,
+          password: password
+        });
+
+
+      if (result.error) {
+
+        message.textContent =
+          "Login failed: " + result.error.message;
+
+        return;
+      }
+
+
+      if (!result.data.session) {
+
+        message.textContent =
+          "Login failed: No session returned.";
+
+        return;
+      }
+
+
+      // Check admin profile
+      const userId = result.data.user.id;
+
+      const profile =
+        await db
+          .from("profiles")
+          .select("role")
+          .eq("id", userId)
+          .single();
+
+
+      if (profile.error) {
+
+        message.textContent =
+          "Login succeeded, but admin profile could not be verified: "
+          + profile.error.message;
+
+        return;
+      }
+
+
+      if (profile.data.role !== "admin") {
+
+        await db.auth.signOut();
+
+        message.textContent =
+          "Access denied. This account is not an admin.";
+
+        return;
+      }
+
+
+      message.textContent = "";
+
+      loginBox.style.display = "none";
+      dashboard.style.display = "block";
+
+    }
+
+    catch (error) {
+
+      message.textContent =
+        "System error: " + error.message;
+
+    }
+
+  });
+
+
+  // LOGOUT
+  logoutButton.addEventListener("click", async function () {
+
+    await db.auth.signOut();
+
+    dashboard.style.display = "none";
+    loginBox.style.display = "block";
+
+    document.getElementById("password").value = "";
+
+  });
+
+
+  // CHECK EXISTING SESSION
+  async function checkSession() {
+
+    try {
+
+      const result =
+        await db.auth.getSession();
+
+      if (!result.data.session) {
+        return;
+      }
+
+
+      const userId =
+        result.data.session.user.id;
+
+
+      const profile =
+        await db
+          .from("profiles")
+          .select("role")
+          .eq("id", userId)
+          .single();
+
+
+      if (
+        !profile.error &&
+        profile.data &&
+        profile.data.role === "admin"
+      ) {
+
+        loginBox.style.display = "none";
+        dashboard.style.display = "block";
+
+      }
+
+    }
+
+    catch (error) {
+
+      console.error(
+        "Session check error:",
+        error
+      );
+
+    }
+
+  }
+
+
+  checkSession();
+
+</script>
+
+</body>
+</html>
